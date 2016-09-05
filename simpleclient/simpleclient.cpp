@@ -239,16 +239,23 @@ int main(int argc, char* argv[]) {
 		return 1;
 	}
 	
-	if(argc >= 4){
-		CmdCreateConnectionChannel cmd;
-		cmd.opcode = CMD_CREATE_CONNECTION_CHANNEL_OPCODE;
-		memcpy(cmd.bd_addr, Bdaddr(argv[3]).addr, 6);
-		cmd.conn_id = 1;
-		cmd.latency_mode = NormalLatency;
-		cmd.auto_disconnect_time = 0x1ff;
-		write_packet(sockfd, &cmd, sizeof(cmd));
-	}
 	int eventId = 0;
+	char* mac_addrs[64];
+	bool json = false;
+	if(argc >= 4){
+		json = true;
+		for(int i = 4; i<=argc; i++){
+			int conn_id = i-3;
+			mac_addrs[conn_id] = argv[i-1];
+			CmdCreateConnectionChannel cmd;
+			cmd.opcode = CMD_CREATE_CONNECTION_CHANNEL_OPCODE;
+			memcpy(cmd.bd_addr, Bdaddr(argv[i-1]).addr, 6);
+			cmd.conn_id = conn_id;
+			cmd.latency_mode = NormalLatency;
+			cmd.auto_disconnect_time = 0x1ff;
+			write_packet(sockfd, &cmd, sizeof(cmd));
+		}
+	}
 	
 	print_help();
 	
@@ -258,11 +265,10 @@ int main(int argc, char* argv[]) {
 		
 		fd_set fdread;
 		FD_ZERO(&fdread);
-		FD_SET(STDIN_FILENO, &fdread);
+		if(!json) FD_SET(STDIN_FILENO, &fdread);
 		FD_SET(sockfd, &fdread);
 		
 		while(true) {
-			usleep(250);
 			int select_res = select(max(STDIN_FILENO, sockfd) + 1, &fdread, NULL, NULL, NULL);
 			if (select_res < 0) {
 				if (errno == EINTR) {
@@ -393,7 +399,7 @@ int main(int argc, char* argv[]) {
 					case EVT_BUTTON_UP_OR_DOWN_OPCODE:
 					case EVT_BUTTON_SINGLE_OR_DOUBLE_CLICK_OR_HOLD_OPCODE: {
 						EvtButtonEvent* evt = (EvtButtonEvent*)pkt;
-						dprintf(5,"{mac:'%s',event:'%s',eventId:%i}\n",argv[3],ClickTypeStrings[evt->click_type],++eventId);
+						dprintf(5,"{mac:'%s',event:'%s',eventId:%i}\n",mac_addrs[evt->base.conn_id],ClickTypeStrings[evt->click_type],++eventId);
 					}
 				}
 			}
