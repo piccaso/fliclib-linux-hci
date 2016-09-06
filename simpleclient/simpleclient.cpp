@@ -20,6 +20,11 @@
 
 #include "client_protocol_packets.h"
 
+extern "C" {
+	void mqtt_setup();
+	void mqtt_publish(char *msg);
+}
+
 using namespace std;
 using namespace FlicClientProtocol;
 
@@ -242,8 +247,10 @@ int main(int argc, char* argv[]) {
 	int eventId = 0;
 	char* mac_addrs[64];
 	bool json = false;
+	char mqtt_payload[4096];
 	if(argc >= 4){
 		json = true;
+		mqtt_setup();
 		for(int i = 4; i<=argc; i++){
 			int conn_id = i-3;
 			mac_addrs[conn_id] = argv[i-1];
@@ -394,12 +401,14 @@ int main(int argc, char* argv[]) {
 			}
 			
 			void* pkt = (void*)readbuf;
-			if(argc >= 4){
+			if(json){
 				switch(readbuf[0]){
 					case EVT_BUTTON_UP_OR_DOWN_OPCODE:
 					case EVT_BUTTON_SINGLE_OR_DOUBLE_CLICK_OR_HOLD_OPCODE: {
 						EvtButtonEvent* evt = (EvtButtonEvent*)pkt;
-						dprintf(5,"{mac:'%s',event:'%s',eventId:%i}\n",mac_addrs[evt->base.conn_id],ClickTypeStrings[evt->click_type],++eventId);
+						sprintf(mqtt_payload,"{m:'%s',e:'%s',i:%i}",mac_addrs[evt->base.conn_id],ClickTypeStrings[evt->click_type],++eventId);
+						printf("mqtt_publish: %s\n", mqtt_payload);
+						mqtt_publish(mqtt_payload);
 					}
 				}
 			}
