@@ -20,10 +20,10 @@
 
 #include "client_protocol_packets.h"
 
-extern "C" {
+//extern "C" {
 	void mqtt_setup();
 	void mqtt_publish(char *msg);
-}
+//}
 
 using namespace std;
 using namespace FlicClientProtocol;
